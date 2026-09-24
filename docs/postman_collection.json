@@ -1,0 +1,298 @@
+{
+  "info": {
+    "name": "X Post Automation API",
+    "description": "Postman collection for the X-post_automation FastAPI backend.\n\nFlow: 1) Run 'X Login' and open authorization_url in a browser (or open {{baseUrl}}/api/v1/auth/x/login?redirect=true) -> approve on X -> the callback stores tokens. 2) Run 'Create text post'.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "post_id",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Liveness check."
+          }
+        },
+        {
+          "name": "Detailed health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/detailed",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health",
+                "detailed"
+              ]
+            },
+            "description": "Checks application, MongoDB and X auth configuration."
+          }
+        }
+      ]
+    },
+    {
+      "name": "X Authentication",
+      "item": [
+        {
+          "name": "X login (returns authorization_url)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/x/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "x",
+                "login"
+              ]
+            },
+            "description": "Copy data.authorization_url into a browser. Or use ?redirect=true in a browser."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const url = pm.response.json().data.authorization_url;",
+                  "console.log('Open in browser:', url);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "X login (browser redirect)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/x/login?redirect=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "x",
+                "login"
+              ],
+              "query": [
+                {
+                  "key": "redirect",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "Open this URL in a BROWSER (Postman cannot complete the X consent screen)."
+          }
+        },
+        {
+          "name": "X callback (called by X)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/x/callback?code=<code from X>&state=<state from X>",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "x",
+                "callback"
+              ],
+              "query": [
+                {
+                  "key": "code",
+                  "value": "<code from X>"
+                },
+                {
+                  "key": "state",
+                  "value": "<state from X>"
+                }
+              ]
+            },
+            "description": "Normally invoked automatically by X after you approve. Provided for reference; a manual call only works with a real, unused code+state pair."
+          }
+        },
+        {
+          "name": "Current X user",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/x/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "x",
+                "me"
+              ]
+            },
+            "description": "Uses the official X SDK users.get_me()."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Posts",
+      "item": [
+        {
+          "name": "Create text post",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/posts/text",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "posts",
+                "text"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Testing my X post automation backend!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('created', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "if (j.data && j.data.post_id) { pm.collectionVariables.set('post_id', j.data.post_id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get posts (history)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/posts?page=1&page_size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "posts"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Optional: &status=published|deleted"
+          }
+        },
+        {
+          "name": "Get single post",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/posts/{{post_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "posts",
+                "{{post_id}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Delete post",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/posts/{{post_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "posts",
+                "{{post_id}}"
+              ]
+            },
+            "description": "Deletes on X via the SDK; the history record is kept with status 'deleted'."
+          }
+        }
+      ]
+    }
+  ]
+}
